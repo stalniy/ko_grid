@@ -1,0 +1,15 @@
+{
+  "name": "tkrid",
+  "version": "0.0.1",
+  "main": "build/tkrid-0.0.1.min.js",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "spec"
+  ],
+  "dependencies": {
+    "tkt": ">= 0.0.3",
+    "knockout.js": ">= 2.1.0"
+  }
+}
