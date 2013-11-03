@@ -11,11 +11,10 @@ var tkGrid = (function () {
     },
 
     initialize: function (adapter, options) {
-      options = options || {};
-      this.options = tkt.deepExtend(options || {}, this.options);
+      this.options = tkt.deepExtend({}, this.options, options);
 
-      this.state = new options.state(defaultState);
-      this._setUp(options);
+      this.state = new this.options.state(this.options.defaults);
+      this._setUp();
       this._connectTo(adapter);
     },
 
@@ -26,7 +25,7 @@ var tkGrid = (function () {
       return this._dispatcher;
     },
 
-    _setUp: function (options) {
+    _setUp: function () {
       this.columns = ko.observableArray([]);
       this.rows    = ko.observableArray([]);
 
@@ -42,7 +41,6 @@ var tkGrid = (function () {
     _definePageObservables: function () {
       this.hasToPaginate = ko.computed({
         read: hasToPaginate,
-
         deferEvaluation: true
       }, this.state);
     },
@@ -54,16 +52,25 @@ var tkGrid = (function () {
 
     _connectTo: function (adapter) {
       this._adapter = adapter;
-      this.state.extract().subscribe(this.apply, this);
+      this.state.extract().subscribe(function (newState) {
+        newState.withMeta = this.columns().length === 0;
+        this.trigger("state:change", newState);
+        this.apply(newState);
+      }, this);
       return this;
     },
 
     _fill: function (data) {
       if (data.columns) {
-        this.fields(data.columns);
+        this.columns(data.columns);
       }
-      this.items(data.items);
-      this.lastPage(data.lastPage);
+      this.setRows(data.items);
+      this.state.lastPage(data.lastPage);
+    },
+
+    fill: function (data) {
+      this._fill(data);
+      this.trigger("grid:updated", { grid: this });
     },
 
     pages: function () {
@@ -71,17 +78,14 @@ var tkGrid = (function () {
     },
 
     apply: function (newState) {
-      newState.withMeta = this.columns.length === 0;
+      if (this.isLocked()) {
+        this._adapter.abortProcessing();
+      }
 
       this.lock();
-      return this._adapter.apply(newState)
+      return this._adapter.process(newState)
         .done(this.fill.bind(this))
         .always(this.unlock);
-    },
-
-    fill: function (data) {
-      this._fill(data);
-      this._dispatcher.notifySubscribers({ grid: this }, 'updated');
     },
 
     reload: function () {
@@ -90,7 +94,7 @@ var tkGrid = (function () {
       return this;
     },
 
-    items: function (newRows) {
+    setRows: function (newRows) {
       this.rows.valueWillMutate();
       this._syncItems(newRows || []);
       this.rows.valueHasMutated();
@@ -101,10 +105,10 @@ var tkGrid = (function () {
     },
 
     column: function (name) {
-      if (!this.columns) {
+      if (this.columns().length === 0) {
         return null;
       }
-      return arrayFind(this.columns, function (column) {
+      return arrayFind(this.columns(), function (column) {
         return column.name === name;
       });
     },
@@ -134,6 +138,7 @@ var tkGrid = (function () {
 
     search: function (query) {
       this.state.searchQuery(query);
+      return this;
     },
 
     orderBy: function () {
@@ -141,6 +146,7 @@ var tkGrid = (function () {
       if (!isEqualArrays(sortedBy(), columns)) {
         sortedBy(columns);
       }
+      return this;
     },
 
     toggleOrderBy: function (fieldName) {
@@ -153,7 +159,7 @@ var tkGrid = (function () {
         currentOrder[1] = 'asc';
       }
 
-      this.orderBy(currentOrder.join('-'));
+      return this.orderBy(currentOrder.join('-'));
     },
 
     filterFor: function (path) {
@@ -164,7 +170,7 @@ var tkGrid = (function () {
     },
 
     shiftPage: function (value) {
-      this.setPage(this.state.page() + Number(value));
+      return this.setPage(this.state.page() + Number(value));
     },
 
     setPage: function (value) {
@@ -172,14 +178,17 @@ var tkGrid = (function () {
       if (this.state.page.inRange(newPage)) {
         this.state.page(newPage);
       }
+      return this;
     },
 
     showFirstPage: function () {
       this.state.page(1);
+      return this;
     },
 
     showLastPage: function () {
       this.state.page(this.state.lastPage());
+      return this;
     },
 
     isLocked: function () {
@@ -188,19 +197,16 @@ var tkGrid = (function () {
 
     lock: function () {
       this.state._isLocked(true);
+      return this;
     },
 
     unlock: function () {
       this.state._isLocked(false);
+      return this;
     },
 
     on: function (event, callback, context) {
-      var data = findResponderFor.call(this, event);
-      if (data) {
-        data.responder[data.method](callback, context);
-      } else {
-        this.dispatcher().subscribe(callback, context, event);
-      }
+      this.dispatcher().subscribe(callback, context, event);
       return this;
     },
 
@@ -210,6 +216,7 @@ var tkGrid = (function () {
 
     resetSearchQuery: function () {
       this.state.searchQuery('');
+      return this;
     },
 
     isEmptySearchQuery: function () {

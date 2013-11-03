@@ -10,13 +10,21 @@ tkGrid.LocalAdapter = (function () {
       }
     },
 
-    apply: function (state) {
+    process: function (state) {
       var items = this.rowsForState(state);
-      return ImmidiateDeferred({
-        columns  : state.withMeta ? this.columns() : null,
-        lastPage : Math.ceil(items.length / state.perPage),
-        items    : this.paginate(items, state.page, state.perPage)
-      });
+      var process = Deferred();
+
+      if (this._shouldStopProcessing) {
+        process.reject()
+      } else {
+        process.resolve({
+          columns  : state.withMeta ? this.columns() : null,
+          lastPage : Math.ceil(items.length / state.perPage),
+          items    : this.paginate(items, state.page, state.perPage)
+        });
+      }
+
+      return process;
     },
 
     rows: function () {
@@ -37,7 +45,7 @@ tkGrid.LocalAdapter = (function () {
     },
 
     load: function (rows) {
-      this._rows = this.columns().length > 0 ? this._prepareRows(rows) : rows;
+      this._rows = rows;
       return this;
     },
 
@@ -45,6 +53,9 @@ tkGrid.LocalAdapter = (function () {
       var items = this.rows().slice(0);
 
       forEach(this.handles, function (method, stateField) {
+        if (this._shouldStopProcessing) {
+          return false;
+        }
         items = this[method](items, state[stateField]);
       }, this);
 
@@ -56,17 +67,19 @@ tkGrid.LocalAdapter = (function () {
         return items;
       }
 
+      var self = this;
       items.sort(function compare(row1, row2, index) {
         index = index || 0;
         var
           column = columns[index].split("-"),
+          cast   = self._getColumnType(column[0]),
           order  = column[1] == "desc" ? -1 : 1,
-          v1     = row1[column[0]],
-          v2     = row2[column[0]];
+          v1     = cast(row1[column[0]]),
+          v2     = cast(row2[column[0]]);
 
-        if (typeof v1 === 'string') {
-          v1 = v1.toLowerCase();
-          v2 = v2.toLowerCase();
+        if (typeof v1 === "string" && typeof v2 === "string") {
+          v1 = String(v1).toLowerCase();
+          v2 = String(v2).toLowerCase();
         }
 
         if (v1 !== v2) {

@@ -7,14 +7,6 @@ tkGrid.BaseAdapter = (function () {
       searchQuery : "search"
     },
 
-    fill: function (vm, data) {
-      if (data.columns) {
-        vm.fields(data.columns);
-      }
-      vm.items(data.items);
-      vm.lastPage(data.max_page);
-    },
-
     define: function (dsl) {
       dsl(buildColumn.bind(this));
       return this;
@@ -31,29 +23,18 @@ tkGrid.BaseAdapter = (function () {
       return this.columns().findByName(name);
     },
 
-    _prepareRows: function (rows) {
-      forEach(rows, this._prepareRow, this);
-      return rows;
-    },
-
-    _prepareRow: function (row) {
-      forEach(this.columns(), function (column) {
-        if (column.as) {
-          var cast = this._getColumnType(column.name);
-          if (typeof cast === 'function') {
-            row[column.name] = cast(row[column.name], column);
-          }
-        }
-      }, this);
-    },
-
     _getColumnType: function (fieldName, value) {
       var column = this.columns().findByName(fieldName);
       if (column) {
         return typeof column.as === 'string' ? BaseGrid.ColumnType[column.as] : column.as;
       } else {
-        return BaseGrid.ColumnType[typeof value];
+        return BaseGrid.ColumnType[typeof value] || returnSelf;
       }
+    },
+
+    abortProcessing: function () {
+      this._shouldStopProcessing = true;
+      return this;
     }
   });
 
@@ -98,11 +79,31 @@ tkGrid.BaseAdapter = (function () {
   }
 
   function addIndexTo(array, prop) {
-    var index = {};
-    array['findBy' + capitalize(prop)] = function (value) {
+    var
+      index = {},
+
+      removeIndex = function (arrayOrItem) {
+        if (!Array.isArray(arrayOrItem)) {
+          arrayOrItem = [ arrayOrItem ];
+        }
+        var i = arrayOrItem.length;
+        while (i--) {
+          delete index[this[i][prop]];
+        }
+      };
+
+
+    array['findBy' + tkt.capitalize(prop)] = function (value) {
       return index[value];
     };
-    array.push  = push;
+
+    array.push  = function () {
+      var count = this.length;
+      Array.prototype.push.apply(this, arguments);
+      for (var i = count, c = this.length; i < c; i++) {
+        index[this[i][prop]] = this[i];
+      }
+    };
     array.shift = function (){
       removeIndex.call(this, this[0]);
       return Array.prototype.shift.apply(this, arguments);
@@ -115,25 +116,8 @@ tkGrid.BaseAdapter = (function () {
       removeIndex.call(this, this.slice(start, start + deleteCount));
       return Array.prototype.splice.apply(this, arguments);
     };
+
     return array;
-
-    function push() {
-      var count = this.length;
-      Array.prototype.push.apply(this, arguments);
-      for (var i = count, c = this.length; i < c; i++) {
-        index[this[i][prop]] = this[i];
-      }
-    }
-
-    function removeIndex(arrayOrItem) {
-      if (!Array.isArray(arrayOrItem)) {
-        arrayOrItem = [ arrayOrItem ];
-      }
-      var i = arrayOrItem.length;
-      while (i--) {
-        delete index[this[i][prop]];
-      }
-    }
   }
 
   return BaseAdapter;
