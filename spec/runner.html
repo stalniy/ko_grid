@@ -21,11 +21,13 @@
   <script type="text/javascript" src="../src/grid/adapter/local.js"></script>
 
   <!-- include spec files here... -->
-  <script type="text/javascript" src="models/state.js"></script>
+  <script type="text/javascript" src="grid.js"></script>
+  <script type="text/javascript" src="grid/state.js"></script>
 
 
   <script type="text/javascript">
     window.tkt = ko.tkt;
+    window.Deferred = jQuery.Deferred;
 
     (function() {
       var jasmineEnv = jasmine.getEnv();

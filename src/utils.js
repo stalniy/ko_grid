@@ -37,15 +37,6 @@ function arrayFind(array, filter, context) {
   return null;
 }
 
-function findResponderFor(path) {
-  path = path.split(':');
-  var method = 'on' + capitalize(path.pop()), count = path.length, i = 0, responder;
-  do {
-    responder = this[path[i++]];
-  } while (i < count && responder);
-  return responder && responder[method] ? { responder: responder, method: method } : null;
-}
-
 function isEqualArrays(array1, array2) {
   if (array1 === array2) {
     return true;
@@ -69,20 +60,4 @@ function returnSelf(value) {
 
 function returnThis() {
   return this;
-}
-
-function ImmidiateDeferred() {
-  var args = arguments;
-
-  function done(fn) {
-    fn.apply(null, args);
-    return this;
-  }
-
-  return {
-    done   : done,
-    always : done,
-    then   : done,
-    fail   : returnThis
-  };
 }

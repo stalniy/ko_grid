@@ -44,7 +44,7 @@ var GridState = (function () {
     },
 
     definePageObservables: function () {
-      this.page         = ko.observable();
+      this.page         = ko.observable(1);
       this.lastPage     = ko.observable();
       this.page.isFirst = ko.computed(isFirstPage, this);
       this.page.isLast  = ko.computed(isLastPage, this);

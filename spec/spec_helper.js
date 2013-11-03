@@ -1,14 +1,16 @@
 (function (jasmine) {
-  jasmine.Matchers.prototype.toBeObservable = function () {
-    var actual = this.actual;
+  ko.utils.extend(jasmine.Matchers.prototype, {
+    toBeObservable: function () {
+      var actual = this.actual;
 
-    this.actual = "object";
-    return ko.isObservable(actual);
-  };
+      this.actual = "object";
+      return ko.isObservable(actual);
+    },
 
-  jasmine.Matchers.prototype.toBeInstanceOf = function (object) {
-    return this.actual instanceof object;
-  };
+    toBeInstanceOf: function (object) {
+      return this.actual instanceof object;
+    }
+  });
 
   var sharedExamples = {};
   window.sharedExamplesFor = function (name, executor) {

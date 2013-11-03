@@ -2,12 +2,12 @@ module.exports = function (grunt) {
   var template = ";(function(factory) {" +
     "if (typeof define === \"function\" && define.amd) {\n" +
     "    // AMD anonymous module\n" +
-    "    define([\"knockout\", \"tkt\"], factory);\n" +
+    "    define([\"knockout\", \"tkt\", \"deferred\"], factory);\n" +
     "} else {\n" +
     "   // No module loader (plain <script> tag) - put directly in global namespace\n" +
-    "   ko.tkGrid = factory(ko, ko.tkt);\n" +
+    "   ko.tkGrid = factory(ko, ko.tkt, jQuery.Deferred);\n" +
     "}\n" +
-  "})(function(ko, tkt, undefined) { {SOURCE_CODE};\n return tkGrid; });\n";
+  "})(function(ko, tkt, Deferred, undefined) { {SOURCE_CODE};\n return tkGrid; });\n";
 
   grunt.registerMultiTask("build", "Wraps file with factory builder", function () {
     var options = this.options();
