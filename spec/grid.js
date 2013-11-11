@@ -1,9 +1,13 @@
 describe("Grid", function () {
-  var grid;
+  var grid, adapter;
+
+  beforeEach(function () {
+    adapter = DataAdapter();
+  })
 
   describe("by default", function () {
     beforeEach(function () {
-      grid = new tkGrid(DataAdapter());
+      grid = new tkGrid(adapter);
     })
 
     it ("uses Object as rowType", function () {
@@ -41,7 +45,7 @@ describe("Grid", function () {
         sortedBy: [ 'name-desc' ]
       };
       mergedDefaults = tkt.deepExtend({}, tkGrid.prototype.options.defaults, defaultValues);
-      grid = new tkGrid(DataAdapter(), {
+      grid = new tkGrid(adapter, {
         defaults: defaultValues,
         state: jasmine.createSpy("custom State").andReturn(new tkGrid.State)
       });
@@ -64,12 +68,12 @@ describe("Grid", function () {
     })
   })
 
-  describe("when it's initialized with custom state", function () {
+  describe("when custom state constructor is specified", function () {
     var CustomState;
 
     beforeEach(function () {
       CustomState = tkGrid.State.extend({ });
-      grid = new tkGrid(DataAdapter(), { state : CustomState });
+      grid = new tkGrid(adapter, { state : CustomState });
     })
 
     it ("creates state as an instance of specified 'state' option class", function () {
@@ -99,7 +103,7 @@ describe("Grid", function () {
 
   describe("page updates", function () {
     beforeEach(function () {
-      grid = new tkGrid(DataAdapter());
+      grid = new tkGrid(adapter);
       grid.state.page(1).lastPage(5);
     })
 
@@ -140,7 +144,7 @@ describe("Grid", function () {
 
   describe("behavior", function () {
     beforeEach(function () {
-      grid = new tkGrid(DataAdapter());
+      grid = new tkGrid(adapter);
     })
 
     it ("sets state's page into '1' when 'showFirstPage' is called", function () {
@@ -182,6 +186,53 @@ describe("Grid", function () {
     it ("sets state's searchQuery into specified value when 'search' method is called", function () {
       grid.search("it");
       expect(grid.state.searchQuery()).toEqual("it");
+    })
+  })
+
+  describe("sorting", function () {
+    beforeEach(function () {
+      grid = new tkGrid(adapter);
+      adapter.execDeferred.resolve([
+        { id: 1, name: 'test 1' },
+        { id: 2, name: 'test 2' }
+      ]);
+    })
+
+    describe("by single field", function () {
+      beforeEach(function () {
+        grid.toggleOrderBy("name");
+      })
+
+      it ("appends '-asc' to sorting field", function () {
+        expect(grid.state.sortedBy()).toEqual([ "name-asc" ]);
+      })
+
+      it ("appends '-desc' to sorting field when 'toggleOrderBy' is called second time with the same argument", function () {
+        grid.toggleOrderBy("name");
+        expect(grid.state.sortedBy()).toEqual([ "name-desc" ]);
+      })
+    })
+
+    describe("by multiple fields", function () {
+      var sortableFields;
+
+      beforeEach(function () {
+        sortableFields = [ 'name', 'test', 'me' ];
+        grid.orderBy.apply(grid, sortableFields);
+      })
+
+      it ("sets all passed arguments to 'orderBy' into state 'sortedBy' field", function () {
+        expect(grid.state.sortedBy()).toEqual(sortableFields);
+      })
+
+      it ("doesn't update state if the same values is passed into 'orderBy'", function () {
+        var hadChangeNotification = false;
+        grid.state.sortedBy.subscribe(function () {
+          hadChangeNotification = true;
+        });
+        grid.orderBy.apply(grid, sortableFields);
+        expect(hadChangeNotification).toBe(false);
+      })
     })
   })
 

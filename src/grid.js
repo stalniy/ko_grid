@@ -211,7 +211,8 @@ var tkGrid = (function () {
     },
 
     trigger: function (event, params) {
-      return this.dispatcher().notifySubscribers(params, event);
+      this.dispatcher().notifySubscribers(params, event);
+      return this;
     },
 
     resetSearchQuery: function () {
